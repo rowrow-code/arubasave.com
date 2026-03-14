@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import DealCard from "@/components/DealCard";
 import CategoryFilter from "@/components/CategoryFilter";
 import SearchBar from "@/components/SearchBar";
+import { prisma } from "@/lib/prisma";
+import { Category } from "@prisma/client";
 
 interface Deal {
   id: string;
@@ -18,17 +20,33 @@ interface Deal {
 }
 
 async function getDeals(search?: string, category?: string): Promise<Deal[]> {
-  const params = new URLSearchParams();
-  if (search) params.set("search", search);
-  if (category) params.set("category", category);
-
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-  const res = await fetch(`${baseUrl}/api/deals?${params.toString()}`, {
-    cache: "no-store",
-  });
-
-  if (!res.ok) return [];
-  return res.json();
+  try {
+    const deals = await prisma.deal.findMany({
+      where: {
+        expiryDate: { gt: new Date() },
+        ...(category && Object.values(Category).includes(category as Category)
+          ? { category: category as Category }
+          : {}),
+        ...(search
+          ? {
+              OR: [
+                { title: { contains: search, mode: "insensitive" } },
+                { business: { name: { contains: search, mode: "insensitive" } } },
+              ],
+            }
+          : {}),
+      },
+      include: {
+        business: { select: { id: true, name: true } },
+        _count: { select: { bookings: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return deals as any;
+  } catch {
+    return [];
+  }
 }
 
 interface PageProps {
