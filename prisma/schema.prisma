@@ -1,0 +1,57 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Business {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  phone        String?
+  description  String?
+  createdAt    DateTime @default(now())
+  deals        Deal[]
+}
+
+model Deal {
+  id              String    @id @default(cuid())
+  businessId      String
+  business        Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  title           String
+  description     String
+  category        Category
+  originalPrice   Decimal   @db.Decimal(10, 2)
+  discountedPrice Decimal   @db.Decimal(10, 2)
+  expiryDate      DateTime
+  totalSlots      Int
+  imageUrl        String?
+  createdAt       DateTime  @default(now())
+  bookings        Booking[]
+
+  @@index([category])
+  @@index([expiryDate])
+}
+
+model Booking {
+  id         String   @id @default(cuid())
+  dealId     String
+  deal       Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  guestName  String
+  guestPhone String
+  createdAt  DateTime @default(now())
+}
+
+enum Category {
+  Restaurants
+  Spa
+  Tours
+  Sports
+}
