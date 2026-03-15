@@ -40,9 +40,10 @@ export async function POST(req: NextRequest) {
       { id: business.id, name: business.name, email: business.email },
       { status: 201 }
     );
-  } catch {
+  } catch (err) {
+    console.error("Registration error:", err);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", detail: err instanceof Error ? err.message : String(err) },
       { status: 500 }
     );
   }
